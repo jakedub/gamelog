@@ -35,7 +35,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 ITAD_API_KEY = os.getenv("ITAD_API_KEY", "")
 STEAM_API_KEY = os.getenv("STEAM_API_KEY", "")
-
+STEAM_ID = os.getenv("STEAM_ID")
 
 # Application definition
 

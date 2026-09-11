@@ -1,9 +1,11 @@
 import strawberry
 import strawberry_django
+from strawberry.types import Info
 from typing import List, Optional
+from games.models.catalog import WishlistItem
 from games.models import Game, GameOwnership, PriceAlert, PriceHistory
 from games.services.search import search_itad_games
-from .types import DealType, GameSearchResultType, GameType, GameOwnershipType, PriceAlertType, PriceHistoryType
+from .types import DealType, GameSearchResultType, GameType, GameOwnershipType, PriceAlertType, PriceHistoryType, WishlistItemType
 
 @strawberry.type
 class Query:
@@ -67,3 +69,23 @@ class Query:
     @strawberry.field
     def price_history(self, game_id: int) -> List[PriceHistoryType]:
         return PriceHistory.objects.filter(game_id=game_id).select_related('game')
+
+@strawberry.type
+class Query:
+    @strawberry.field
+    def wishlist(
+        self,
+        on_sale_only: bool = False,
+        sort_by_price: str | None = None,  # "asc" or "desc"
+    ) -> list[WishlistItemType]:
+        qs = WishlistItem.objects.select_related("game").all()
+
+        if on_sale_only:
+            qs = qs.filter(game__current_best_price__isnull=False)
+
+        if sort_by_price == "asc":
+            qs = qs.order_by("game__current_best_price")
+        elif sort_by_price == "desc":
+            qs = qs.order_by("-game__current_best_price")
+
+        return qs

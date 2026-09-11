@@ -1,5 +1,8 @@
 import strawberry
-from typing import Optional
+from strawberry.types import Info
+from typing import Optional, List
+from games.services.wishlist import sync_user_wishlist
+from games.services.steam import import_steam_games_for_user
 from games.services.itad import sync_game_prices
 from games.models import Game, GameOwnership
 from .types import GameOwnershipType, GameType
@@ -51,3 +54,33 @@ class Mutation:
 
         sync_game_prices(game)
         return game
+@strawberry.type
+class Mutation:
+    @strawberry.mutation
+    def import_steam_library(self, info: Info, steam_id: str) -> List[GameOwnershipType]:
+        user = info.context.request.user
+        
+        if not user or user.is_anonymous:
+            raise Exception("Authentication required to import Steam library.")
+
+        return import_steam_games_for_user(steam_id=steam_id, user=user)
+@strawberry.type
+class Mutation:
+    @strawberry.mutation
+    def sync_wishlist(self, info: Info) -> bool:
+        """
+        Ingests Steam Wishlist & ITAD Waitlist items into the database.
+        """
+        user = info.context.request.user
+        
+        # Single-user fallback if running unauthenticated in dev
+        if not user.is_authenticated:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user = User.objects.first()
+
+        if not user:
+            raise Exception("No user found to assign wishlist items to.")
+
+        sync_user_wishlist(user)
+        return True
